@@ -1,0 +1,37 @@
+{
+  "metadata": {
+    "source": "科技产品媒体与KOL资源表（示例）",
+    "last_updated": "2026-05-19",
+    "total_count": 107,
+    "note": "匹配规则：评论/帖子的nickname字段包含列表中任一platform_name即视为命中。请根据自己的行业替换为对应的KOL列表。"
+  },
+  "media": [
+    {"name": "新浪数码", "category": "机构媒体", "platforms": {"weibo": "新浪数码", "xhs": "新浪数码"}},
+    {"name": "腾讯数码", "category": "机构媒体", "platforms": {"weibo": "腾讯数码"}},
+    {"name": "网易手机", "category": "机构媒体", "platforms": {"weibo": "网易手机"}},
+    {"name": "凰家评测", "category": "机构媒体", "platforms": {"weibo": "凰家评测", "bili": "凰家评测", "douyin": "凰家评测"}},
+    {"name": "手机中国", "category": "机构媒体", "platforms": {"weibo": "手机中国", "bili": "手机中国"}},
+    {"name": "IT168", "category": "机构媒体", "platforms": {"xhs": "IT168"}},
+    {"name": "爱范儿", "category": "机构媒体", "platforms": {"weibo": "爱范儿", "xhs": "爱范儿"}},
+    {"name": "快科技", "category": "机构媒体", "platforms": {"weibo": "快科技", "douyin": "快科技官方"}},
+    {"name": "锋潮科技", "category": "机构媒体", "platforms": {"weibo": "锋潮科技", "bili": "锋潮科技", "douyin": "锋潮科技", "xhs": "锋潮评测"}},
+    {"name": "数字尾巴", "category": "机构媒体", "platforms": {"weibo": "数字尾巴", "douyin": "数字尾巴", "xhs": "数字尾巴"}},
+    {"name": "安兔兔", "category": "机构媒体", "platforms": {"weibo": "安兔兔", "douyin": "安兔兔"}},
+    {"name": "ZEALER", "category": "机构媒体", "platforms": {"weibo": "ZEALER", "xhs": "ZEALER"}},
+    {"name": "什么值得买", "category": "机构媒体", "platforms": {"weibo": "什么值得买"}},
+    {"name": "太平洋科技", "category": "机构媒体", "platforms": {"weibo": "太平洋科技"}},
+    {"name": "IT之家", "category": "机构媒体", "platforms": {"weibo": "IT之家"}}
+  ],
+  "kol": [
+    {"name": "钟文泽", "category": "KOL", "platforms": {"weibo": "钟文泽", "bili": "钟文泽", "xhs": "钟文泽"}},
+    {"name": "科技美学", "category": "KOL", "platforms": {"weibo": "科技美学", "bili": "科技美学", "xhs": "科技美学"}},
+    {"name": "小白测评", "category": "KOL", "platforms": {"weibo": "小白测评", "bili": "小白测评", "douyin": "小白测评", "xhs": "小白测评"}},
+    {"name": "科技小辛", "category": "KOL", "platforms": {"weibo": "科技小辛", "bili": "科技小辛", "douyin": "科技小辛", "xhs": "科技小辛"}},
+    {"name": "WHYLAB", "category": "KOL", "platforms": {"weibo": "WHYLAB", "bili": "WHYLAB", "xhs": "WHYLAB"}},
+    {"name": "影视飓风", "category": "KOL", "platforms": {"weibo": "影视飓风", "bili": "影视飓风", "xhs": "影视飓风", "douyin": "影视飓风"}},
+    {"name": "先看评测", "category": "KOL", "platforms": {"weibo": "先看评测", "bili": "先看评测", "douyin": "先看评测"}},
+    {"name": "极客湾Geekerwan", "category": "KOL", "platforms": {"bili": "极客湾Geekerwan"}},
+    {"name": "电工科技", "category": "KOL", "platforms": {"weibo": "电工科技", "bili": "电工科技", "douyin": "电工科技"}}
+  ],
+  "blacklist": []
+}

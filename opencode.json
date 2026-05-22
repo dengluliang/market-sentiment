@@ -1,0 +1,30 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-sonnet-4-6",
+  "provider": {
+    "anthropic": {
+      "options": {
+        "apiKey": "${ANTHROPIC_API_KEY}"
+      }
+    }
+  },
+  "mcp": {
+    "feishu": {
+      "type": "remote",
+      "url": "${FEISHU_MCP_URL}",
+      "enabled": true
+    }
+  },
+  "permission": {
+    "bash": {
+      "uv run *": "allow",
+      "export *": "allow",
+      "find *": "allow",
+      "wc *": "allow",
+      "mkdir *": "allow",
+      "mv *": "allow",
+      "ls *": "allow",
+      "*": "ask"
+    }
+  }
+}

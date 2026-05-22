@@ -1,0 +1,4 @@
+[submodule "MediaCrawler"]
+	path = MediaCrawler
+	url = https://github.com/NanmiCoder/MediaCrawler.git
+	ignore = dirty
