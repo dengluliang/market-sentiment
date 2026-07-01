@@ -11,13 +11,23 @@
   "mcp": {
     "feishu": {
       "type": "remote",
-      "url": "${FEISHU_MCP_URL}",
+      "url": "{env:FEISHU_MCP_URL}",
+      "enabled": true
+    },
+    "coolapk": {
+      "type": "local",
+      "command": [
+        "node",
+        "coolapk-mcp/mcp-server.js"
+      ],
       "enabled": true
     }
   },
   "permission": {
     "bash": {
       "uv run *": "allow",
+      "bun *": "allow",
+      "python3 scripts/*": "allow",
       "export *": "allow",
       "find *": "allow",
       "wc *": "allow",

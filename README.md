@@ -2,11 +2,12 @@
 
 基于 [opencode](https://opencode.ai) + MediaCrawler 的全网舆情分析工具。
 
-只需一句话描述你想分析的产品/事件，AI 自动完成：多平台数据采集 → 情感分析 → 观点聚类 → 生成专业报告。
+只需一句话描述你想分析的产品/事件，AI 自动完成：多平台数据采集 → 相关性筛查去噪 → 情感分析 → 观点聚类 → 生成专业报告。
 
 ## 它能做什么
 
-- 自动爬取 5 大平台（微博、小红书、抖音、B站、知乎）的帖子和评论
+- 自动爬取 7 大平台（微博、小红书、抖音、B站、知乎、IT之家、酷安）的帖子和评论
+- 数据汇总后先做相关性筛查，去除广告、误命中、灌水和同名噪声
 - 对采集的评论进行情感分类（正面/负面/中性）
 - 识别 KOL 和媒体的报道观点
 - 自动识别竞品动态
@@ -27,6 +28,12 @@ pip install uv
 
 # 安装 Playwright 浏览器
 uv run playwright install chromium
+
+# 安装酷安 MCP 依赖
+cd coolapk-mcp && npm install && cd ..
+
+# 安装 IT之家爬虫依赖
+pip install requests beautifulsoup4
 ```
 
 ### 2. 克隆本项目
@@ -78,7 +85,12 @@ cd ..
   "mcp": {
     "feishu": {
       "type": "remote",
-      "url": "你的飞书MCP地址",
+      "url": "{env:FEISHU_MCP_URL}",
+      "enabled": true
+    },
+    "coolapk": {
+      "type": "local",
+      "command": ["node", "coolapk-mcp/mcp-server.js"],
       "enabled": true
     }
   }
@@ -87,7 +99,7 @@ cd ..
 
 **模型要求**：推荐 Claude Sonnet 4 及以上（需要强大的中文分析和长文本处理能力）。
 
-**飞书 MCP**（可选）：用于将报告输出到飞书文档。获取方式见 [飞书 MCP 文档](https://mcp.feishu.cn)。如果不需要飞书输出，可以把 `mcp` 部分删掉，报告会以文本形式直接展示。
+**飞书 MCP**（可选）：用于将报告输出到飞书文档。获取方式见 [飞书 MCP 文档](https://mcp.feishu.cn)，并通过环境变量 `FEISHU_MCP_URL` 配置。如果不需要飞书输出，可以把 `feishu` 部分删掉，报告会以文本形式直接展示。
 
 ### 5. 开始使用
 
@@ -102,21 +114,21 @@ opencode
 - `看看"小米SU7"最近一周的舆情`
 - `"iPhone 16 Pro"用户反馈分析`
 
-AI 会自动引导你确认关键词和时间范围，然后执行全流程。
+AI 会自动引导你确认关键词、平台范围和采集量策略，然后执行全流程。
 
 ## 使用流程
 
 ```
 你输入需求 → AI 拆解关键词并确认
                     ↓
-         配置爬虫 → 依次爬取 5 个平台（需要扫码登录）
-                    ↓
-         数据汇总 → 情感分析 + 观点聚类
+         配置爬虫 → 依次爬取 7 个平台（部分需要扫码登录）
+                     ↓
+         数据汇总 → 相关性筛查去噪 → 情感分析 + 观点聚类
                     ↓
          生成报告 → 输出飞书文档（或文本）
 ```
 
-**注意**：首次使用每个平台时需要用手机扫码登录（爬虫会弹出浏览器窗口），登录态会缓存数天。
+**注意**：微博、小红书、抖音、B站、知乎首次使用时需要用手机扫码登录（爬虫会弹出浏览器窗口），登录态会缓存数天。IT之家和酷安无需扫码登录。
 
 ## 目录结构
 
@@ -129,6 +141,9 @@ Market Sentiment/
 │           ├── SKILL.md             # Skill 工作流定义
 │           ├── platform_config.md   # 平台配置参考
 │           └── kol_media_list.json  # KOL/媒体库（可替换为你的行业）
+├── scripts/
+│   └── ithome_hot_comments.py       # IT之家评论爬虫
+├── coolapk-mcp/                     # 酷安 MCP Server
 ├── MediaCrawler/                    # 数据采集引擎（NanmiCoder/MediaCrawler）
 │   ├── config/                      # 爬虫配置
 │   ├── data/                        # 采集数据输出（自动生成）

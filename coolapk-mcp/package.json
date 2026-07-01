@@ -1,0 +1,33 @@
+{
+  "name": "coolapk-mcp",
+  "version": "1.1.1",
+  "description": "酷安 API — CLI + MCP Server，内置防爬策略和设备指纹轮换",
+  "main": "src/index.js",
+  "bin": {
+    "coolapk": "bin/cli.js",
+    "coolapk-mcp": "mcp-server.js"
+  },
+  "scripts": {
+    "start": "node --experimental-vm-modules web/server.mjs",
+    "mcp": "node mcp-server.js",
+    "install-sentiment": "npm install @huggingface/transformers"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "node-fetch": "^2.6.7"
+  },
+  "optionalDependencies": {
+    "@huggingface/transformers": "^4.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "web/",
+    "mcp-server.js",
+    "start.sh",
+    "README.md"
+  ]
+}

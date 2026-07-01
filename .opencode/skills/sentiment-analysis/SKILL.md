@@ -12,13 +12,17 @@ description: "Full-pipeline social media sentiment analysis. Use ONLY when user 
 ## 环境依赖
 
 - **MediaCrawler**: 项目内 `MediaCrawler/` 目录
+- **IT之家爬虫**: 项目内 `scripts/ithome_hot_comments.py`（无需登录，纯 API 爬取）
+- **酷安 MCP**: 项目内 `coolapk-mcp/`（无需登录，MCP 工具直接调用）
 - **Python**: 3.11+
 - **uv**: Python 包管理器（`~/.local/bin/uv` 或系统 PATH 中）
+- **bun**: JavaScript 运行时（酷安 MCP 使用）
+- **pip 依赖**: `requests`, `beautifulsoup4`（IT之家爬虫使用）
 - **飞书 MCP**: 需在 `opencode.json` 中配置飞书 MCP URL
 - **KOL/媒体库**: 同目录下 `kol_media_list.json`
 - **平台配置参考**: 同目录下 `platform_config.md`
 
-## 工作流程（7步）
+## 工作流程（8步）
 
 ### Step 1: 解析需求
 
@@ -28,8 +32,8 @@ description: "Full-pipeline social media sentiment analysis. Use ONLY when user 
    - 示例："小米17发热卡顿" → `"小米17发热,小米17卡顿,小米17 发热,小米17 卡顿"`
    - 示例："华为Mate70 口碑" → `"华为Mate70,Mate70体验,Mate70评价,华为Mate70怎么样"`
    - 规则：主关键词 + 同义/近义变体 + 带空格版本
-3. **时间范围**：**必须询问用户**想爬多久的数据（最近3天/一周/两周/一个月）
-4. **确认**：列出拆解的关键词和时间范围，等用户确认后再执行
+3. **采集策略**：默认不限制时间范围，优先采集足够多的公开讨论，确保具备充分分析价值
+4. **确认**：列出拆解的关键词、平台范围和采集量策略，等用户确认后再执行
 
 ### Step 2: 配置爬虫
 
@@ -37,14 +41,14 @@ description: "Full-pipeline social media sentiment analysis. Use ONLY when user 
 
 ```python
 KEYWORDS = "关键词1,关键词2,关键词3"  # Step 1 确认的关键词
-CRAWLER_MAX_NOTES_COUNT = 200         # 每平台最大帖子数
-CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES = 50  # 每帖最大评论数
+CRAWLER_MAX_NOTES_COUNT = 999999      # 极高阈值，不作为业务数量限制
+CRAWLER_MAX_COMMENTS_COUNT_SINGLENOTES = 999999  # 极高阈值，尽量采完相关评论
 ENABLE_GET_COMMENTS = True
 SAVE_DATA_OPTION = "csv"
 ENABLE_CDP_MODE = False               # 使用 Playwright 模式
 ```
 
-同时配置各平台的时间筛选参数（参考 `platform_config.md`）。
+同时配置各平台的相关性与排序参数（参考 `platform_config.md`）。
 
 ### Step 2.5: 数据隔离（防止多次分析数据互相干扰）
 
@@ -58,8 +62,8 @@ ENABLE_CDP_MODE = False               # 使用 Playwright 模式
    cd MediaCrawler
    ARCHIVE_NAME="data_archive/$(date +%Y-%m-%d)_${KEYWORD_SHORT}_$(date +%H%M%S)"
    mkdir -p "$ARCHIVE_NAME"
-   # 只移动有内容的平台目录
-   for platform in weibo xhs douyin bili zhihu; do
+   # 只移动有内容的平台目录（含IT之家、酷安）
+   for platform in ithome coolapk weibo xhs douyin bili zhihu; do
      if [ -d "data/$platform" ] && [ "$(ls -A data/$platform 2>/dev/null)" ]; then
        mv "data/$platform" "$ARCHIVE_NAME/"
      fi
@@ -72,9 +76,28 @@ ENABLE_CDP_MODE = False               # 使用 Playwright 模式
 - 不同关键词/不同任务之间必须归档隔离
 - 归档目录命名示例：`data_archive/2026-05-19_小米17发热_134530/`
 
-### Step 3: 依次爬取5个平台
+### Step 3: 统一登录预检 + 依次爬取7个平台
 
-执行顺序：**微博 → 小红书 → 抖音 → B站 → 知乎**
+执行顺序：**统一扫码预检 → 微博 → 小红书 → 抖音 → B站 → 知乎 → IT之家 → 酷安**
+
+#### 3.0 统一扫码预检
+
+正式爬取前，必须先让用户一次性完成所有需要账号的平台登录检查，避免执行到某个平台才打断用户扫码：
+
+1. 依次检查 `wb`、`xhs`、`dy`、`bili`、`zhihu`。
+2. 如果出现二维码或登录页，提示用户当场扫码。
+3. 5 个账号全部确认已登录后，再开始正式采集。
+4. IT之家和酷安无需扫码登录，不参与预检。
+
+预检命令与正式命令相同，目的只是刷新/确认登录态：
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+cd MediaCrawler
+uv run main.py --platform {platform} --lt qrcode --type search
+```
+
+#### 3.1 MediaCrawler 平台（需登录）
 
 每个平台的执行命令：
 ```bash
@@ -85,8 +108,62 @@ uv run main.py --platform {platform} --lt qrcode --type search
 
 平台代码：`wb` / `xhs` / `dy` / `bili` / `zhihu`
 
+正式采集阶段不要主动按时间或数量截断数据；只按关键词相关性、平台返回结果和风控情况决定停止。
+
+#### 3.2 IT之家（无需登录）
+
+IT之家是科技数码类舆情的核心阵地，评论质量高、用户活跃度强，且**无需登录**即可爬取，应最先执行。
+
+```bash
+cd 项目根目录
+python3 scripts/ithome_hot_comments.py \
+  --keyword "关键词1,关键词2,关键词3" \
+  --pages 5 \
+  --all-comments \
+  --output MediaCrawler/data/ithome/csv/search_comments_$(date +%Y%m%d).csv
+```
+
+**参数说明**：
+- `--keyword`: 与 Step 1 确认的关键词一致，英文逗号分隔
+- `--pages`: 每个关键词搜索的翻页数（1页约18篇文章），默认从 10 开始；若结果仍相关，继续增加直到明显无相关内容或平台无更多结果
+- `--all-comments`: 获取所有评论（不仅是热门）
+- `--output`: 输出到 MediaCrawler/data/ithome/csv/ 目录，与其他平台数据统一管理
+
+**IT之家的优势**：
+- 无需登录、无反爬，执行快速（通常1-3分钟即可完成）
+- 科技数码类话题评论覆盖率极高
+- 评论含城市、设备型号、支持/反对数等丰富元数据
+- 热门评论按支持数排序，天然代表主流观点
+
+**注意**：如果关键词是非科技类（如食品、地产等），IT之家可能无相关内容，可跳过。
+
+#### 3.3 酷安（无需登录，MCP 工具调用）
+
+酷安是安卓/数码发烧友聚集的核心社区，对手机、系统、App 类话题覆盖极全，且用户群体技术素养高，观点犀利。
+
+**使用 MCP 工具采集**（已在 opencode.json 中注册，直接调用即可）：
+
+1. **批量搜索**：使用 `coolapk_batch_search` 工具，传入关键词列表
+   - 参数：`keywords` = Step 1 确认的关键词列表，`pages_per_keyword` 取 MCP 允许的最大值 5；如结果仍相关，继续翻页或补充关键词重试
+   - 返回：去重后的帖子列表（含标题、作者、点赞数、评论数）
+
+2. **获取相关帖子评论**：对搜索结果中与主题相关的帖子，使用 `coolapk_feed` 工具；不要只按评论数阈值过滤
+   - 参数：`id` = 帖子ID，`include_replies` = true，`reply_pages` = 3
+   - 返回：帖子正文 + 热门评论
+
+3. **补充更多评论**（可选）：对特别热门的帖子，使用 `coolapk_replies` 获取更多页评论
+   - 参数：`id` = 帖子ID，`pages` = 5，`sort` = "hot"
+
+**酷安的优势**：
+- 无需登录，内置防爬策略（自动限速、指纹轮换）
+- 安卓/手机/系统类话题覆盖率极高，用户群高度垂直
+- 评论质量高，用户敢说真话，负面反馈更直接
+- 适合数码产品口碑分析、系统体验反馈、App 评测等场景
+
+**注意**：如果关键词是非科技类话题（如汽车、食品等），酷安可能覆盖较少，可跳过。
+
 **异常处理**：
-- 登录态过期（弹出扫码页面超时）→ **暂停并提醒用户扫码**
+- 登录态过期（弹出扫码页面超时）→ 优先依赖 3.0 统一预检；正式爬取中仍过期时再暂停提醒用户扫码
 - 浏览器崩溃（TargetClosedError）→ 记录已采集数据，继续下一个平台
 - 无搜索结果 → 在报告中注明"该平台暂无相关讨论"
 
@@ -94,13 +171,23 @@ uv run main.py --platform {platform} --lt qrcode --type search
 
 ### Step 4: 数据汇总
 
-1. 统计各平台 CSV 文件行数：
+1. 统计各平台 CSV 文件行数（含 IT之家）：
    ```bash
    find MediaCrawler/data -name "*.csv" -exec wc -l {} \;
    ```
-2. 汇报采集总量
+2. 汇报采集总量（分平台列出）
 
-### Step 5: 情感分析 + 观点提取
+### Step 5: 相关性筛查 + 去噪
+
+在正式情感分析前，必须先对汇总数据做一轮相关性筛查，剔除与分析目标弱相关或无关的噪声数据：
+
+1. **相关性判断**：逐批检查帖子标题、正文、评论内容、关键词命中上下文，判断是否围绕 Step 1 确认的分析目标展开
+2. **去除噪声**：剔除广告引流、抽奖灌水、纯表情/无语义评论、平台推荐词误命中、同名但不同对象、机器人重复内容
+3. **保留边界样本**：与目标直接相关的竞品对比、购买决策、售后体验、使用场景反馈应保留，不要因未直接复述主关键词而误删
+4. **记录筛查结果**：统计原始数据量、有效数据量、剔除量、主要噪声类型，并在报告“核心事件概览”或数据说明中简要披露
+5. **分析输入规则**：后续情感分析、观点聚类、风险评估和报告引用，只使用筛查后的有效数据；如需引用被剔除样本，必须说明原因
+
+### Step 6: 情感分析 + 观点提取
 
 1. **读取数据**：分批读取各平台 CSV 评论文件（每批约 300-500 条）
 2. **情感标注**：对每批评论进行正面/负面/中性分类
@@ -111,7 +198,7 @@ uv run main.py --platform {platform} --lt qrcode --type search
 5. **竞品识别**：从评论中自动识别提到的竞品品牌
 6. **风险评估**：基于负面占比、情绪烈度、传播趋势进行风险定级
 
-### Step 6: 生成飞书文档
+### Step 7: 生成飞书文档
 
 使用 `feishu_create-doc` 工具，按以下模板输出到飞书个人知识库。
 
@@ -121,11 +208,11 @@ uv run main.py --platform {platform} --lt qrcode --type search
 
 **wiki_space**: `my_library`
 
-### Step 7: 收尾
+### Step 8: 收尾
 
 向用户提供：
 1. 飞书文档链接
-2. CSV 原始数据保存路径（`MediaCrawler/data/{platform}/csv/`）
+2. CSV 原始数据保存路径（`MediaCrawler/data/{platform}/csv/`，含 `ithome/csv/`）
 
 ---
 
@@ -179,11 +266,15 @@ uv run main.py --platform {platform} --lt qrcode --type search
 
 ### 六、核心社交媒体反馈（必须输出）
 
-按平台分节，每个平台包含：
+按平台分节（IT之家和酷安放前面，因为科技类话题覆盖最全），每个平台包含：
 1. **平台概况**（1-2句：采集量+负面占比+讨论特点）
 2. **核心负面观点**（3-5条，含用户昵称/地区/互动数据）
 3. **核心正面/中性观点**（2-3条）
 4. **平台舆情特征**（1句总结）
+
+**IT之家特别说明**：引用评论时优先选择"热门"类型（高支持数），引用格式中用"支持数"替代"点赞数"。设备型号信息可作为用户画像参考（如iPhone用户vs安卓用户的观点差异）。
+
+**酷安特别说明**：酷安用户群偏安卓发烧友，观点更极端直接。引用评论时标注点赞数，帖子和评论区都是重要数据源。酷安的负面反馈往往最为尖锐真实。
 
 最后附 **社交媒体综合评估表**（lark-table：平台/负面占比/核心负面关键词/核心正面关键词/影响力）
 
@@ -219,8 +310,8 @@ uv run main.py --platform {platform} --lt qrcode --type search
 
 ```
 ---
-数据来源：微博、小红书、抖音、B站、知乎等公开社交媒体平台。
-数据采集工具：MediaCrawler
+数据来源：IT之家、酷安、微博、小红书、抖音、B站、知乎等公开社交媒体平台。
+数据采集工具：MediaCrawler + IT之家爬虫 + 酷安 MCP
 分析模型：Claude
 采集周期：{起始日期} — {结束日期}
 ```
@@ -238,11 +329,12 @@ uv run main.py --platform {platform} --lt qrcode --type search
 
 ## 注意事项
 
-1. **每次执行前必须和用户确认关键词拆解和时间范围**，不要自行假设
+1. **每次执行前必须和用户确认关键词拆解、平台范围和采集量策略**，不要自行假设；默认不限制时间范围
 2. **数据隔离**：每次新任务开始前必须执行 Step 2.5 的归档操作，避免不同分析任务的数据混在一起。这是最容易遗忘但最关键的步骤
 3. **数据采集需要时间**（30-60分钟），过程中保持向用户报告进度
-4. **登录态过期**是最常见的中断原因，检测到时立即暂停提醒用户
-5. **飞书文档大小有限**，如评论数据量极大（>5000条），分析时采用分层抽样策略
-6. **报告中的典型评论引用**应优先选择互动数据高（点赞多）的内容
-7. **所有 lark-table 的 lark-td 内容前后必须有空行**，这是飞书 Markdown 的语法要求
-8. **建议每次新的舆情分析任务在新会话中执行**，保持上下文干净，能分析更多数据
+4. **相关性筛查**：数据汇总后、正式分析前必须先去除弱相关和无关噪声，后续分析只基于筛查后的有效数据
+5. **登录态过期**是最常见的中断原因，检测到时立即暂停提醒用户
+6. **飞书文档大小有限**，如评论数据量极大（>5000条），分析时采用分层抽样策略
+7. **报告中的典型评论引用**应优先选择互动数据高（点赞多）的内容
+8. **所有 lark-table 的 lark-td 内容前后必须有空行**，这是飞书 Markdown 的语法要求
+9. **建议每次新的舆情分析任务在新会话中执行**，保持上下文干净，能分析更多数据

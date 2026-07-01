@@ -18,6 +18,17 @@ MediaCrawler/.env
 MediaCrawler/node_modules/
 MediaCrawler/docs/.vitepress/cache
 
+# Submodule node_modules (avoid OpenCode VCS snapshot blowup)
+coolapk-mcp/node_modules/
+coolapk-mcp/data/
+**/node_modules/
+
+# Generated analysis artifacts
+reports/
+/*.csv
+/*.html
+fix_env.sh
+
 # Lock files (let users generate fresh)
 MediaCrawler/uv.lock
 
